@@ -14,23 +14,8 @@ USER_DATA_DIR = os.path.expanduser("./playwright_x_profile")
 async def run_space_emoji_bot():
     print("\n" + "="*50)
     print("[+] Launching X Space Emoji Bot...")
+    print("[+] Opens your browser. Log in, and join any live Space.")
     print("="*50 + "\n")
-
-    # Customization prompts
-    custom_emojis_input = input("Enter custom emojis separated by spaces (default: 👏 💯 🔥 ❤️ 🚀): ").strip()
-    if custom_emojis_input:
-        emojis = custom_emojis_input.split()
-    else:
-        emojis = ["👏", "💯", "🔥", "❤️", "🚀"]
-
-    try:
-        repeat_count = int(input("How many times should it send reactions per loop? (default: 3): ").strip() or "3")
-    except ValueError:
-        repeat_count = 3
-
-    print(f"\n[+] Configured Emojis: {' '.join(emojis)}")
-    print(f"[+] Burst Count per interval: {repeat_count}")
-    print("[+] Opens your browser. Log in, join any live Space (full view or dock).\n")
 
     async with async_playwright() as p:
         browser_context = await p.chromium.launch_persistent_context(
@@ -57,18 +42,26 @@ async def run_space_emoji_bot():
             input()
             await page.goto("https://x.com/home", wait_until="domcontentloaded")
 
-        print("\n[+] Ready! Join any live Space in the browser. Press Ctrl+C in terminal to exit.\n")
+        print("\n[+] Ready! Join any live Space in the browser window. Waiting for active Space...")
         in_space = False
+        emojis = ["👏", "💯", "🔥", "❤️", "🚀"]
+        repeat_count = 3
 
         try:
             while True:
                 url = page.url
-                space_active = ("/i/spaces/" in url) or (await page.locator("button[aria-label*='React'], button[aria-label*='Reaction']").count() > 0)
+                space_active = False
+                try:
+                    space_active = ("/i/spaces/" in url) or (await page.locator("button[aria-label*='React'], button[aria-label*='Reaction']").count() > 0)
+                except Exception:
+                    # Browser/page might be reloading or navigating
+                    await asyncio.sleep(2)
+                    continue
 
                 if space_active:
                     if not in_space:
                         in_space = True
-                        print(f"\n[+] Active Space detected! Starting reaction loop...")
+                        print(f"\n[+] Active Space detected!")
                         await asyncio.sleep(3)
 
                         try:
@@ -80,7 +73,24 @@ async def run_space_emoji_bot():
                         except Exception:
                             pass
 
-                    # Send multiple reactions based on user configuration
+                        # Prompt user for customization now that they are safely in the Space
+                        print("\n" + "-"*40)
+                        print("--- SPACE EMOJI BOT CONFIGURATION ---")
+                        print("-"*40)
+                        custom_emojis_input = input("Enter custom emojis separated by spaces (default: 👏 💯 🔥 ❤️ 🚀): ").strip()
+                        if custom_emojis_input:
+                            emojis = custom_emojis_input.split()
+                        
+                        try:
+                            repeat_count = int(input("How many reactions per interval? (default: 3): ").strip() or "3")
+                        except ValueError:
+                            repeat_count = 3
+
+                        print(f"\n[+] Configured Emojis: {' '.join(emojis)}")
+                        print(f"[+] Burst Count per interval: {repeat_count}")
+                        print("[+] Starting reaction loop! (Press Ctrl+C in terminal to exit)\n")
+
+                    # Send multiple reactions safely
                     try:
                         react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions'], button[aria-label*='emoji']").first
                         if await react_btn.is_visible():
@@ -252,7 +262,7 @@ def main():
         elif choice == "2":
             run_pixel_clipper()
         elif choice == "3":
-            print("Exiting. Goodbye!")
+            print("Exiting. Goodbye! 🤗")
             break
         else:
             print("[-] Invalid option. Please choose 1, 2, or 3.")
