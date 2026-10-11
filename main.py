@@ -14,7 +14,7 @@ USER_DATA_DIR = os.path.expanduser("./playwright_x_profile")
 async def run_space_emoji_bot():
     print("\n" + "="*50)
     print("[+] Launching X Space Emoji Bot...")
-    print("[+] Opens your browser. Log in, browse, and click any live Space.")
+    print("[+] Opens your browser. Log in, join any live Space (full view or dock).")
     print("="*50 + "\n")
 
     async with async_playwright() as p:
@@ -30,7 +30,6 @@ async def run_space_emoji_bot():
             ignore_default_args=["--enable-automation"]
         )
 
-        # Hide webdriver flag from detection
         await browser_context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
         page = browser_context.pages[0] if browser_context.pages else await browser_context.new_page()
@@ -43,46 +42,56 @@ async def run_space_emoji_bot():
             input()
             await page.goto("https://x.com/home", wait_until="domcontentloaded")
 
-        print("\n[+] Ready! Open any live Space in the browser. Press Ctrl+C in terminal to exit.\n")
-        current_space_url = None
+        print("\n[+] Ready! Join any live Space in the browser. Press Ctrl+C in terminal to exit.\n")
+        in_space = False
 
         try:
             while True:
+                # Check for active space dock, audio bar, or space URL
                 url = page.url
-                if "/i/spaces/" in url:
-                    if url != current_space_url:
-                        current_space_url = url
-                        print(f"\n[+] Entered Space: {current_space_url}")
-                        await asyncio.sleep(4)
+                space_dock = page.locator("[data-testid='audioSpaceDock'], div[aria-label*='Space'], div[role='region']").first
+                
+                # Check if we are inside a space (via URL or active bottom dock container)
+                space_active = ("/i/spaces/" in url) or (await page.locator("button[aria-label*='React'], button[aria-label*='Reaction']").count() > 0)
+
+                if space_active:
+                    if not in_space:
+                        in_space = True
+                        print(f"\n[+] Active Space detected! Starting reaction loop...")
+                        await asyncio.sleep(3)
 
                         try:
                             listen_btn = page.locator("button:has-text('Start listening')")
                             if await listen_btn.is_visible():
                                 await listen_btn.click()
                                 print("[+] Clicked 'Start listening'.")
-                                await asyncio.sleep(3)
+                                await asyncio.sleep(2)
                         except Exception:
                             pass
 
-                    react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']")
-                    if await react_btn.is_visible():
-                        await react_btn.click()
-                        await asyncio.sleep(1)
+                    # Try sending reaction
+                    try:
+                        react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions'], button[aria-label*='emoji']").first
+                        if await react_btn.is_visible():
+                            await react_btn.click()
+                            await asyncio.sleep(1)
 
-                        emojis = ["👏", "💯", "🔥", "❤️", "🚀"]
-                        selected_emoji = random.choice(emojis)
+                            emojis = ["👏", "💯", "🔥", "❤️", "🚀"]
+                            selected_emoji = random.choice(emojis)
 
-                        emoji_btn = page.locator(f"button:has-text('{selected_emoji}')").first
-                        if await emoji_btn.is_visible():
-                            await emoji_btn.click()
-                            print(f"Sent reaction: {selected_emoji}")
+                            emoji_btn = page.locator(f"button:has-text('{selected_emoji}')").first
+                            if await emoji_btn.is_visible():
+                                await emoji_btn.click()
+                                print(f"Sent reaction: {selected_emoji}")
+                    except Exception:
+                        pass
                     
                     await asyncio.sleep(10 + random.randint(-2, 3))
                 else:
-                    if current_space_url is not None:
-                        print("\n[-] Left Space. Waiting for another...")
-                        current_space_url = None
-                    await asyncio.sleep(2)
+                    if in_space:
+                        print("\n[-] Left Space or dock closed. Waiting for another...")
+                        in_space = False
+                    await asyncio.sleep(3)
         except KeyboardInterrupt:
             print("\nExiting bot...")
         finally:
