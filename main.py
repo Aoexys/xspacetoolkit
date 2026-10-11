@@ -21,8 +21,17 @@ async def run_space_emoji_bot():
         browser_context = await p.chromium.launch_persistent_context(
             user_data_dir=USER_DATA_DIR,
             headless=False,
-            viewport={"width": 1280, "height": 800}
+            viewport={"width": 1280, "height": 800},
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-infobars"
+            ],
+            ignore_default_args=["--enable-automation"]
         )
+
+        # Hide webdriver flag from detection
+        await browser_context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
         page = browser_context.pages[0] if browser_context.pages else await browser_context.new_page()
 
