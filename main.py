@@ -70,44 +70,55 @@ async def run_space_emoji_bot():
                         except Exception:
                             pass
 
-                    # Interactive Tray Round
+                    # Interactive Round Menu with Speed Mode
                     print("\n" + "="*40)
                     print("--- SELECT REACTION TRAY EMOJI ---")
                     print("Available: " + " ".join(available_emojis))
                     print("="*40)
-                    chosen_emoji = input("Enter the exact emoji to spam from the tray (or press Enter to skip): ").strip()
+                    chosen_emoji = input("Enter exact emoji to spam (or press Enter to skip): ").strip()
 
                     if chosen_emoji in available_emojis:
                         try:
-                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "5")
+                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "10")
                         except ValueError:
-                            count = 5
+                            count = 10
 
-                        print(f"\n[+] Sending {count} bursts of {chosen_emoji}...")
+                        print("\nSelect Speed Mode:")
+                        print("1. Fast (Rapid-fire spam)")
+                        print("2. Normal (Balanced pace)")
+                        print("3. Slow (Relaxed pace)")
+                        speed_choice = input("Select speed (1-3, default: 1 for Fast): ").strip() or "1"
+
+                        if speed_choice == "3":
+                            delay = 1.2
+                            mode_name = "Slow"
+                        elif speed_choice == "2":
+                            delay = 0.5
+                            mode_name = "Normal"
+                        else:
+                            delay = 0.15
+                            mode_name = "Fast"
+
+                        print(f"\n[+] Spaming {count} bursts of {chosen_emoji} at [{mode_name}] speed...")
 
                         try:
                             for i in range(count):
-                                # Click the heart/reaction button to open tray
                                 react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
                                 if await react_btn.is_visible():
                                     await react_btn.click()
-                                    await asyncio.sleep(0.4)
+                                    await asyncio.sleep(delay)
 
-                                    # Click the specific emoji inside the opened popup tray
                                     tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{chosen_emoji}'), div.css-175oi2r button:has-text('{chosen_emoji}')").first
                                     if await tray_emoji_btn.is_visible():
                                         await tray_emoji_btn.click()
                                         print(f"[{i+1}/{count}] Sent reaction: {chosen_emoji}")
                                     else:
-                                        # Fallback to direct text search if role dialog isn't caught
                                         fallback_btn = page.locator(f"button:has-text('{chosen_emoji}')").last
                                         if await fallback_btn.is_visible():
                                             await fallback_btn.click()
                                             print(f"[{i+1}/{count}] Sent reaction (fallback): {chosen_emoji}")
-                                        else:
-                                            print(f"[-] Could not find {chosen_emoji} in tray.")
                                 
-                                await asyncio.sleep(1.0)
+                                await asyncio.sleep(delay)
                         except Exception as e:
                             print(f"[-] Error sending reaction: {e}")
 
