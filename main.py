@@ -112,7 +112,7 @@ async def run_space_emoji_bot():
                     except ValueError:
                         count = 30
 
-                    delay = 0.018 # Slightly balanced speed to prevent DOM desync
+                    delay = 0.02 # Balanced speed to ensure DOM stability
                     target_label = "Random Chaos" if is_random else chosen_emoji
                     print(f"\n[+] Spaming {count} bursts of [{target_label}] at Ultra-Turbo speed ({delay}s)...")
 
@@ -123,20 +123,21 @@ async def run_space_emoji_bot():
                             try:
                                 react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
                                 if await react_btn.is_visible():
-                                    await react_btn.click()
-                                    await asyncio.sleep(delay)
+                                    # Ensure tray is fresh by evaluating click directly
+                                    await react_btn.evaluate("node => node.click()")
+                                    await asyncio.sleep(0.01)
 
                                     tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{current_emoji}'), div.css-175oi2r button:has-text('{current_emoji}')").first
                                     if await tray_emoji_btn.count() > 0:
-                                        await tray_emoji_btn.click()
+                                        await tray_emoji_btn.evaluate("node => node.click()")
                                         print(f"[{i+1}/{count}] Sent: {current_emoji}")
                                     else:
                                         fallback_btn = page.locator(f"button:has-text('{current_emoji}')").last
                                         if await fallback_btn.count() > 0:
-                                            await fallback_btn.click()
+                                            await fallback_btn.evaluate("node => node.click()")
                                             print(f"[{i+1}/{count}] Sent (fallback): {current_emoji}")
                             except Exception:
-                                pass # Soft skip if a frame drops, keeping the loop flowing smoothly
+                                pass # Soft skip on dropped frames
                             
                             await asyncio.sleep(delay)
                     except Exception as e:
