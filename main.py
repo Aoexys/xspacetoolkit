@@ -8,11 +8,11 @@ from faster_whisper import WhisperModel
 USER_DATA_DIR = os.path.expanduser("./playwright_x_profile")
 
 # ==========================================
-# TOOL 1: LIVE SPACE EMOJI BOT
+# TOOL 1: LIVE SPACE EMOJI BOT (Targeted Speaker Reactions)
 # ==========================================
 async def run_space_emoji_bot():
     print("\n" + "="*50)
-    print("[+] Launching X Space Emoji Bot...")
+    print("[+] Launching X Space Targeted Emoji Bot...")
     print("[+] Opens your browser. Log in, and join any live Space.")
     print("="*50 + "\n")
 
@@ -81,65 +81,104 @@ async def run_space_emoji_bot():
                         except Exception:
                             pass
 
-                    # Numbered Interactive Menu
                     print("\n" + "="*45)
-                    print("         SELECT REACTION EMOJI")
+                    print("         TARGETED SPEAKER REACTION MODE")
                     print("="*45)
-                    for k, v in emoji_map.items():
-                        print(f" [{k}] {v}", end="  ")
-                        if int(k) % 5 == 0:
-                            print()
-                    print("\n" + "="*45)
-                    
-                    choice_input = input("Select emoji number (1-10) or press Enter to skip: ").strip()
+                    print("1. General Room Reactions (Standard Burst)")
+                    print("2. Target Specific Speaker Avatar")
+                    mode_choice = input("Select mode (1 or 2, default: 2): ").strip() or "2"
 
-                    if choice_input in emoji_map:
-                        chosen_emoji = emoji_map[choice_input]
-                        try:
-                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "35")
-                        except ValueError:
-                            count = 35
+                    if mode_choice == "2":
+                        # Scan active speaker elements in the Space DOM
+                        print("\n[+] Scanning active speakers on stage...")
+                        speaker_nodes = page.locator("div[role='button']:has(img), div[data-testid='userAvatar']")
+                        speaker_count = await speaker_nodes.count()
 
-                        print("\nSelect Speed Mode:")
-                        print("1. Ultra-Turbo (0.016s - Blazing 0.015-0.018 zone)")
-                        print("2. Fast (0.1s delay)")
-                        print("3. Normal (0.4s delay)")
-                        speed_choice = input("Select speed (1-3, default: 1 for Ultra-Turbo): ").strip() or "1"
-
-                        if speed_choice == "3":
-                            delay = 0.4
-                            mode_name = "Normal"
-                        elif speed_choice == "2":
-                            delay = 0.1
-                            mode_name = "Fast"
+                        if speaker_count == 0:
+                            print("[-] No active speaker avatars found. Retrying in general room mode...")
                         else:
+                            print(f"[+] Found {speaker_count} speaker nodes on stage.")
+                            
+                            # Click the first detected speaker avatar to inspect popup DOM
+                            target_index = 0
+                            print(f"[+] Clicking speaker avatar #{target_index + 1}...")
+                            speaker_avatar = speaker_nodes.nth(target_index)
+                            await speaker_avatar.click()
+                            await asyncio.sleep(1)
+
+                            # Print numbers menu for emojis
+                            print("\n" + "="*45)
+                            print("         SELECT REACTION EMOJI")
+                            print("="*45)
+                            for k, v in emoji_map.items():
+                                print(f" [{k}] {v}", end="  ")
+                                if int(k) % 5 == 0:
+                                    print()
+                            print("\n" + "="*45)
+
+                            choice_input = input("Select emoji number (1-10) to send to speaker: ").strip()
+
+                            if choice_input in emoji_map:
+                                chosen_emoji = emoji_map[choice_input]
+                                try:
+                                    count = int(input(f"How many times to send {chosen_emoji} to speaker?: ").strip() or "20")
+                                except ValueError:
+                                    count = 20
+
+                                delay = 0.016  # Ultra-Turbo speed zone
+                                print(f"\n[+] Sending {count} direct reactions of {chosen_emoji} at Ultra-Turbo (0.016s)...")
+
+                                try:
+                                    for i in range(count):
+                                        # Click targeted speaker avatar
+                                        await speaker_avatar.click()
+                                        await asyncio.sleep(delay)
+
+                                        # Look for reaction button inside active popup
+                                        target_emoji_btn = page.locator(f"button:has-text('{chosen_emoji}'), div[role='dialog'] button:has-text('{chosen_emoji}')").first
+                                        if await target_emoji_btn.count() > 0:
+                                            await target_emoji_btn.click()
+                                            print(f"[{i+1}/{count}] Sent direct reaction {chosen_emoji} to speaker!")
+                                        else:
+                                            # Fallback general tray
+                                            fallback = page.locator(f"button:has-text('{chosen_emoji}')").last
+                                            if await fallback.count() > 0:
+                                                await fallback.click()
+                                                print(f"[{i+1}/{count}] Sent direct reaction (fallback): {chosen_emoji}")
+
+                                        await asyncio.sleep(delay)
+                                except Exception as e:
+                                    print(f"[-] Error during direct speaker reaction: {e}")
+
+                                print("[+] Speaker reaction round complete!")
+
+                    else:
+                        # Standard Room Reaction Loop
+                        print("\n" + "="*45)
+                        print("         SELECT REACTION EMOJI")
+                        print("="*45)
+                        for k, v in emoji_map.items():
+                            print(f" [{k}] {v}", end="  ")
+                            if int(k) % 5 == 0:
+                                print()
+                        print("\n" + "="*45)
+
+                        choice_input = input("Select emoji number (1-10): ").strip()
+                        if choice_input in emoji_map:
+                            chosen_emoji = emoji_map[choice_input]
+                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "25")
                             delay = 0.016
-                            mode_name = "Ultra-Turbo"
 
-                        print(f"\n[+] Spaming {count} bursts of {chosen_emoji} at [{mode_name}] speed...")
-
-                        try:
                             for i in range(count):
                                 react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
                                 if await react_btn.is_visible():
                                     await react_btn.click()
                                     await asyncio.sleep(delay)
-
                                     tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{chosen_emoji}'), div.css-175oi2r button:has-text('{chosen_emoji}')").first
                                     if await tray_emoji_btn.count() > 0:
                                         await tray_emoji_btn.click()
                                         print(f"[{i+1}/{count}] Sent: {chosen_emoji}")
-                                    else:
-                                        fallback_btn = page.locator(f"button:has-text('{chosen_emoji}')").last
-                                        if await fallback_btn.count() > 0:
-                                            await fallback_btn.click()
-                                            print(f"[{i+1}/{count}] Sent (fallback): {chosen_emoji}")
-                                
                                 await asyncio.sleep(delay)
-                        except Exception as e:
-                            print(f"[-] Error sending reaction: {e}")
-
-                        print("[+] Round complete! Ready for next round.")
 
                     await asyncio.sleep(4)
                 else:
