@@ -112,31 +112,31 @@ async def run_space_emoji_bot():
                     except ValueError:
                         count = 30
 
-                    delay = 0.016 # Ultra-Turbo speed
+                    delay = 0.018 # Slightly balanced speed to prevent DOM desync
                     target_label = "Random Chaos" if is_random else chosen_emoji
                     print(f"\n[+] Spaming {count} bursts of [{target_label}] at Ultra-Turbo speed ({delay}s)...")
 
                     try:
                         for i in range(count):
-                            # Pick a random emoji each iteration if random mode is active
                             current_emoji = random.choice(all_emojis) if is_random else chosen_emoji
 
-                            # 1. Always open the tray first by clicking the reaction button
-                            react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
-                            if await react_btn.is_visible():
-                                await react_btn.click()
-                                await asyncio.sleep(delay)
+                            try:
+                                react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
+                                if await react_btn.is_visible():
+                                    await react_btn.click()
+                                    await asyncio.sleep(delay)
 
-                                # 2. Click the specific emoji inside the newly opened tray
-                                tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{current_emoji}'), div.css-175oi2r button:has-text('{current_emoji}')").first
-                                if await tray_emoji_btn.count() > 0:
-                                    await tray_emoji_btn.click()
-                                    print(f"[{i+1}/{count}] Sent: {current_emoji}")
-                                else:
-                                    fallback_btn = page.locator(f"button:has-text('{current_emoji}')").last
-                                    if await fallback_btn.count() > 0:
-                                        await fallback_btn.click()
-                                        print(f"[{i+1}/{count}] Sent (fallback): {current_emoji}")
+                                    tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{current_emoji}'), div.css-175oi2r button:has-text('{current_emoji}')").first
+                                    if await tray_emoji_btn.count() > 0:
+                                        await tray_emoji_btn.click()
+                                        print(f"[{i+1}/{count}] Sent: {current_emoji}")
+                                    else:
+                                        fallback_btn = page.locator(f"button:has-text('{current_emoji}')").last
+                                        if await fallback_btn.count() > 0:
+                                            await fallback_btn.click()
+                                            print(f"[{i+1}/{count}] Sent (fallback): {current_emoji}")
+                            except Exception:
+                                pass # Soft skip if a frame drops, keeping the loop flowing smoothly
                             
                             await asyncio.sleep(delay)
                     except Exception as e:
