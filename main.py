@@ -14,8 +14,23 @@ USER_DATA_DIR = os.path.expanduser("./playwright_x_profile")
 async def run_space_emoji_bot():
     print("\n" + "="*50)
     print("[+] Launching X Space Emoji Bot...")
-    print("[+] Opens your browser. Log in, join any live Space (full view or dock).")
     print("="*50 + "\n")
+
+    # Customization prompts
+    custom_emojis_input = input("Enter custom emojis separated by spaces (default: 👏 💯 🔥 ❤️ 🚀): ").strip()
+    if custom_emojis_input:
+        emojis = custom_emojis_input.split()
+    else:
+        emojis = ["👏", "💯", "🔥", "❤️", "🚀"]
+
+    try:
+        repeat_count = int(input("How many times should it send reactions per loop? (default: 3): ").strip() or "3")
+    except ValueError:
+        repeat_count = 3
+
+    print(f"\n[+] Configured Emojis: {' '.join(emojis)}")
+    print(f"[+] Burst Count per interval: {repeat_count}")
+    print("[+] Opens your browser. Log in, join any live Space (full view or dock).\n")
 
     async with async_playwright() as p:
         browser_context = await p.chromium.launch_persistent_context(
@@ -47,11 +62,7 @@ async def run_space_emoji_bot():
 
         try:
             while True:
-                # Check for active space dock, audio bar, or space URL
                 url = page.url
-                space_dock = page.locator("[data-testid='audioSpaceDock'], div[aria-label*='Space'], div[role='region']").first
-                
-                # Check if we are inside a space (via URL or active bottom dock container)
                 space_active = ("/i/spaces/" in url) or (await page.locator("button[aria-label*='React'], button[aria-label*='Reaction']").count() > 0)
 
                 if space_active:
@@ -69,20 +80,20 @@ async def run_space_emoji_bot():
                         except Exception:
                             pass
 
-                    # Try sending reaction
+                    # Send multiple reactions based on user configuration
                     try:
                         react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions'], button[aria-label*='emoji']").first
                         if await react_btn.is_visible():
-                            await react_btn.click()
-                            await asyncio.sleep(1)
+                            for _ in range(repeat_count):
+                                await react_btn.click()
+                                await asyncio.sleep(0.5)
 
-                            emojis = ["👏", "💯", "🔥", "❤️", "🚀"]
-                            selected_emoji = random.choice(emojis)
-
-                            emoji_btn = page.locator(f"button:has-text('{selected_emoji}')").first
-                            if await emoji_btn.is_visible():
-                                await emoji_btn.click()
-                                print(f"Sent reaction: {selected_emoji}")
+                                selected_emoji = random.choice(emojis)
+                                emoji_btn = page.locator(f"button:has-text('{selected_emoji}')").first
+                                if await emoji_btn.is_visible():
+                                    await emoji_btn.click()
+                                    print(f"Sent reaction: {selected_emoji}")
+                                await asyncio.sleep(1)
                     except Exception:
                         pass
                     
