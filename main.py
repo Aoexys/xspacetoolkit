@@ -43,7 +43,18 @@ async def run_space_emoji_bot():
 
         print("\n[+] Ready! Join any live Space in the browser window. Waiting for active Space...")
         in_space = False
-        available_emojis = ["😂", "😮", "😢", "💜", "💯", "👏", "✊", "👍", "👎", "👋"]
+        emoji_map = {
+            "1": "😂",
+            "2": "😮",
+            "3": "😢",
+            "4": "💜",
+            "5": "💯",
+            "6": "👏",
+            "7": "✊",
+            "8": "👍",
+            "9": "👎",
+            "10": "👋"
+        }
 
         try:
             while True:
@@ -70,55 +81,70 @@ async def run_space_emoji_bot():
                         except Exception:
                             pass
 
-                    # Interactive Round Menu with Speed Mode
-                    print("\n" + "="*40)
-                    print("--- SELECT REACTION TRAY EMOJI ---")
-                    print("Available: " + " ".join(available_emojis))
-                    print("="*40)
-                    chosen_emoji = input("Enter exact emoji to spam (or press Enter to skip): ").strip()
+                    # Numbered Interactive Menu
+                    print("\n" + "="*45)
+                    print("         SELECT REACTION EMOJI")
+                    print("="*45)
+                    for k, v in emoji_map.items():
+                        print(f" [{k}] {v}", end="  ")
+                        if int(k) % 5 == 0:
+                            print()
+                    print("\n" + "="*45)
+                    
+                    choice_input = input("Select emoji number (1-10) or press Enter to skip: ").strip()
 
-                    if chosen_emoji in available_emojis:
+                    if choice_input in emoji_map:
+                        chosen_emoji = emoji_map[choice_input]
                         try:
-                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "10")
+                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "25")
                         except ValueError:
-                            count = 10
+                            count = 25
 
                         print("\nSelect Speed Mode:")
-                        print("1. Fast (Rapid-fire spam)")
-                        print("2. Normal (Balanced pace)")
-                        print("3. Slow (Relaxed pace)")
-                        speed_choice = input("Select speed (1-3, default: 1 for Fast): ").strip() or "1"
+                        print("1. Ultra-Turbo (Instant JS click - max speed)")
+                        print("2. Fast (0.1s delay)")
+                        print("3. Normal (0.4s delay)")
+                        speed_choice = input("Select speed (1-3, default: 1 for Ultra-Turbo): ").strip() or "1"
 
                         if speed_choice == "3":
-                            delay = 1.2
-                            mode_name = "Slow"
-                        elif speed_choice == "2":
-                            delay = 0.5
+                            delay = 0.4
                             mode_name = "Normal"
-                        else:
-                            delay = 0.15
+                        elif speed_choice == "2":
+                            delay = 0.1
                             mode_name = "Fast"
+                        else:
+                            delay = 0.001
+                            mode_name = "Ultra-Turbo"
 
                         print(f"\n[+] Spaming {count} bursts of {chosen_emoji} at [{mode_name}] speed...")
 
                         try:
                             for i in range(count):
+                                # Open reaction tray
                                 react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
                                 if await react_btn.is_visible():
-                                    await react_btn.click()
-                                    await asyncio.sleep(delay)
+                                    if delay > 0.01:
+                                        await react_btn.click()
+                                        await asyncio.sleep(delay)
+                                    else:
+                                        await react_btn.evaluate("node => node.click()")
 
+                                    # Click specific emoji button via JS or locator
                                     tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{chosen_emoji}'), div.css-175oi2r button:has-text('{chosen_emoji}')").first
-                                    if await tray_emoji_btn.is_visible():
-                                        await tray_emoji_btn.click()
-                                        print(f"[{i+1}/{count}] Sent reaction: {chosen_emoji}")
+                                    if await tray_emoji_btn.count() > 0:
+                                        if delay > 0.01:
+                                            await tray_emoji_btn.click()
+                                        else:
+                                            await tray_emoji_btn.evaluate("node => node.click()")
+                                        print(f"[{i+1}/{count}] Sent: {chosen_emoji}")
                                     else:
                                         fallback_btn = page.locator(f"button:has-text('{chosen_emoji}')").last
-                                        if await fallback_btn.is_visible():
-                                            await fallback_btn.click()
-                                            print(f"[{i+1}/{count}] Sent reaction (fallback): {chosen_emoji}")
+                                        if await fallback_btn.count() > 0:
+                                            await fallback_btn.evaluate("node => node.click()")
+                                            print(f"[{i+1}/{count}] Sent (fallback): {chosen_emoji}")
                                 
-                                await asyncio.sleep(delay)
+                                if delay > 0.01:
+                                    await asyncio.sleep(delay)
                         except Exception as e:
                             print(f"[-] Error sending reaction: {e}")
 
