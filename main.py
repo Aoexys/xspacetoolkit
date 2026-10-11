@@ -1,6 +1,5 @@
 import asyncio
 import os
-import random
 import subprocess
 from playwright.async_api import async_playwright
 from PIL import Image, ImageDraw, ImageFont
@@ -44,8 +43,6 @@ async def run_space_emoji_bot():
 
         print("\n[+] Ready! Join any live Space in the browser window. Waiting for active Space...")
         in_space = False
-        emojis = ["👏", "💯", "🔥", "❤️", "🚀"]
-        repeat_count = 3
 
         try:
             while True:
@@ -54,7 +51,6 @@ async def run_space_emoji_bot():
                 try:
                     space_active = ("/i/spaces/" in url) or (await page.locator("button[aria-label*='React'], button[aria-label*='Reaction']").count() > 0)
                 except Exception:
-                    # Browser/page might be reloading or navigating
                     await asyncio.sleep(2)
                     continue
 
@@ -73,41 +69,44 @@ async def run_space_emoji_bot():
                         except Exception:
                             pass
 
-                        # Prompt user for customization now that they are safely in the Space
-                        print("\n" + "-"*40)
-                        print("--- SPACE EMOJI BOT CONFIGURATION ---")
-                        print("-"*40)
-                        custom_emojis_input = input("Enter custom emojis separated by spaces (default: 👏 💯 🔥 ❤️ 🚀): ").strip()
-                        if custom_emojis_input:
-                            emojis = custom_emojis_input.split()
+                    # Interactive Round-Based Loop
+                    print("\n" + "-"*40)
+                    print("--- EMOJI BURST ROUND ---")
+                    print("-"*40)
+                    target_emoji = input("Enter the single emoji you want to spam this round (e.g., 🔥) or press Enter to skip: ").strip()
+                    
+                    if target_emoji:
+                        try:
+                            count = int(input(f"How many times should I send {target_emoji}?: ").strip() or "5")
+                        except ValueError:
+                            count = 5
+
+                        print(f"\n[+] Sponging {count} reactions of {target_emoji}...")
                         
                         try:
-                            repeat_count = int(input("How many reactions per interval? (default: 3): ").strip() or "3")
-                        except ValueError:
-                            repeat_count = 3
+                            for i in range(count):
+                                # Open reaction tray if needed
+                                react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions'], button[aria-label*='emoji']").first
+                                if await react_btn.is_visible():
+                                    await react_btn.click()
+                                    await asyncio.sleep(0.4)
 
-                        print(f"\n[+] Configured Emojis: {' '.join(emojis)}")
-                        print(f"[+] Burst Count per interval: {repeat_count}")
-                        print("[+] Starting reaction loop! (Press Ctrl+C in terminal to exit)\n")
-
-                    # Send multiple reactions safely
-                    try:
-                        react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions'], button[aria-label*='emoji']").first
-                        if await react_btn.is_visible():
-                            for _ in range(repeat_count):
-                                await react_btn.click()
-                                await asyncio.sleep(0.5)
-
-                                selected_emoji = random.choice(emojis)
-                                emoji_btn = page.locator(f"button:has-text('{selected_emoji}')").first
+                                # Click specific target emoji
+                                emoji_btn = page.locator(f"button:has-text('{target_emoji}')").first
                                 if await emoji_btn.is_visible():
                                     await emoji_btn.click()
-                                    print(f"Sent reaction: {selected_emoji}")
-                                await asyncio.sleep(1)
-                    except Exception:
-                        pass
+                                    print(f"[{i+1}/{count}] Sent reaction: {target_emoji}")
+                                else:
+                                    print(f"[-] Could not find emoji button for {target_emoji}")
+                                
+                                await asyncio.sleep(1.2)
+                        except Exception as e:
+                            print(f"[-] Error during reaction loop: {e}")
+
+                        print("[+] Round complete! You can queue another round or just watch.")
                     
-                    await asyncio.sleep(10 + random.randint(-2, 3))
+                    # Pause briefly before checking again
+                    await asyncio.sleep(5)
                 else:
                     if in_space:
                         print("\n[-] Left Space or dock closed. Waiting for another...")
