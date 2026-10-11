@@ -1,0 +1,15 @@
+# Playwright local session profiles (Crucial for security!)
+playwright_x_profile/
+
+# Python cache & virtual environment
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# Audio & Video processing output files
+*.mp3
+*.wav
+*.mp4
+*.ts
+*_transcript.txt
