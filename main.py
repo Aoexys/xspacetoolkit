@@ -96,20 +96,22 @@ async def run_space_emoji_bot():
                     if choice_input in emoji_map:
                         chosen_emoji = emoji_map[choice_input]
                         try:
-                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "30")
+                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "25")
                         except ValueError:
-                            count = 30
+                            count = 25
 
                         delay = 0.016 # Ultra-Turbo speed
                         print(f"\n[+] Spaming {count} bursts of {chosen_emoji} at Ultra-Turbo speed ({delay}s)...")
 
                         try:
                             for i in range(count):
+                                # 1. Always open the tray first by clicking the reaction button
                                 react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
                                 if await react_btn.is_visible():
                                     await react_btn.click()
                                     await asyncio.sleep(delay)
 
+                                    # 2. Click the specific emoji inside the newly opened tray
                                     tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{chosen_emoji}'), div.css-175oi2r button:has-text('{chosen_emoji}')").first
                                     if await tray_emoji_btn.count() > 0:
                                         await tray_emoji_btn.click()
