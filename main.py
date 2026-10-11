@@ -1,5 +1,6 @@
 import asyncio
 import os
+import random
 import subprocess
 from playwright.async_api import async_playwright
 from PIL import Image, ImageDraw, ImageFont
@@ -55,6 +56,7 @@ async def run_space_emoji_bot():
             "9": "👎",
             "10": "👋"
         }
+        all_emojis = list(emoji_map.values())
 
         try:
             while True:
@@ -90,44 +92,57 @@ async def run_space_emoji_bot():
                         if int(k) % 5 == 0:
                             print()
                     print("\n" + "="*45)
+                    print(" [Enter] -> RANDOM EMOJI CHAOS MODE")
+                    print("="*45)
                     
-                    choice_input = input("Select emoji number (1-10) or press Enter to skip: ").strip()
+                    choice_input = input("Select emoji number (1-10) or press Enter for Random: ").strip()
 
-                    if choice_input in emoji_map:
+                    is_random = (choice_input == "")
+                    if is_random:
+                        chosen_emoji = None
+                        print("\n[+] Mode set to: RANDOM EMOJI CHAOS 🎲")
+                    elif choice_input in emoji_map:
                         chosen_emoji = emoji_map[choice_input]
-                        try:
-                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "25")
-                        except ValueError:
-                            count = 25
+                    else:
+                        print("[-] Invalid selection, defaulting to Random Chaos mode.")
+                        chosen_emoji = None
 
-                        delay = 0.016 # Ultra-Turbo speed
-                        print(f"\n[+] Spaming {count} bursts of {chosen_emoji} at Ultra-Turbo speed ({delay}s)...")
+                    try:
+                        count = int(input(f"How many times to send?: ").strip() or "30")
+                    except ValueError:
+                        count = 30
 
-                        try:
-                            for i in range(count):
-                                # 1. Always open the tray first by clicking the reaction button
-                                react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
-                                if await react_btn.is_visible():
-                                    await react_btn.click()
-                                    await asyncio.sleep(delay)
+                    delay = 0.016 # Ultra-Turbo speed
+                    target_label = "Random Chaos" if is_random else chosen_emoji
+                    print(f"\n[+] Spaming {count} bursts of [{target_label}] at Ultra-Turbo speed ({delay}s)...")
 
-                                    # 2. Click the specific emoji inside the newly opened tray
-                                    tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{chosen_emoji}'), div.css-175oi2r button:has-text('{chosen_emoji}')").first
-                                    if await tray_emoji_btn.count() > 0:
-                                        await tray_emoji_btn.click()
-                                        print(f"[{i+1}/{count}] Sent: {chosen_emoji}")
-                                    else:
-                                        fallback_btn = page.locator(f"button:has-text('{chosen_emoji}')").last
-                                        if await fallback_btn.count() > 0:
-                                            await fallback_btn.click()
-                                            print(f"[{i+1}/{count}] Sent (fallback): {chosen_emoji}")
-                                
+                    try:
+                        for i in range(count):
+                            # Pick a random emoji each iteration if random mode is active
+                            current_emoji = random.choice(all_emojis) if is_random else chosen_emoji
+
+                            # 1. Always open the tray first by clicking the reaction button
+                            react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
+                            if await react_btn.is_visible():
+                                await react_btn.click()
                                 await asyncio.sleep(delay)
-                        except Exception as e:
-                            print(f"[-] Error sending reaction: {e}")
 
-                        print("[+] Round complete! Ready for next round.")
+                                # 2. Click the specific emoji inside the newly opened tray
+                                tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{current_emoji}'), div.css-175oi2r button:has-text('{current_emoji}')").first
+                                if await tray_emoji_btn.count() > 0:
+                                    await tray_emoji_btn.click()
+                                    print(f"[{i+1}/{count}] Sent: {current_emoji}")
+                                else:
+                                    fallback_btn = page.locator(f"button:has-text('{current_emoji}')").last
+                                    if await fallback_btn.count() > 0:
+                                        await fallback_btn.click()
+                                        print(f"[{i+1}/{count}] Sent (fallback): {current_emoji}")
+                            
+                            await asyncio.sleep(delay)
+                    except Exception as e:
+                        print(f"[-] Error sending reaction: {e}")
 
+                    print("[+] Round complete! Ready for next round.")
                     await asyncio.sleep(4)
                 else:
                     if in_space:
