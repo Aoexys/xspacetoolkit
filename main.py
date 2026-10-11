@@ -96,12 +96,12 @@ async def run_space_emoji_bot():
                     if choice_input in emoji_map:
                         chosen_emoji = emoji_map[choice_input]
                         try:
-                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "30")
+                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "35")
                         except ValueError:
-                            count = 30
+                            count = 35
 
                         print("\nSelect Speed Mode:")
-                        print("1. Ultra-Turbo (0.025s - Blazing 0.02-0.03s zone)")
+                        print("1. Ultra-Turbo (0.016s - Blazing 0.015-0.018 zone)")
                         print("2. Fast (0.1s delay)")
                         print("3. Normal (0.4s delay)")
                         speed_choice = input("Select speed (1-3, default: 1 for Ultra-Turbo): ").strip() or "1"
@@ -113,7 +113,7 @@ async def run_space_emoji_bot():
                             delay = 0.1
                             mode_name = "Fast"
                         else:
-                            delay = 0.025
+                            delay = 0.016
                             mode_name = "Ultra-Turbo"
 
                         print(f"\n[+] Spaming {count} bursts of {chosen_emoji} at [{mode_name}] speed...")
