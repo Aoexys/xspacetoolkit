@@ -96,12 +96,12 @@ async def run_space_emoji_bot():
                     if choice_input in emoji_map:
                         chosen_emoji = emoji_map[choice_input]
                         try:
-                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "25")
+                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "30")
                         except ValueError:
-                            count = 25
+                            count = 30
 
                         print("\nSelect Speed Mode:")
-                        print("1. Ultra-Turbo (Instant JS click - max speed)")
+                        print("1. Ultra-Turbo (0.025s - Blazing 0.02-0.03s zone)")
                         print("2. Fast (0.1s delay)")
                         print("3. Normal (0.4s delay)")
                         speed_choice = input("Select speed (1-3, default: 1 for Ultra-Turbo): ").strip() or "1"
@@ -113,38 +113,29 @@ async def run_space_emoji_bot():
                             delay = 0.1
                             mode_name = "Fast"
                         else:
-                            delay = 0.001
+                            delay = 0.025
                             mode_name = "Ultra-Turbo"
 
                         print(f"\n[+] Spaming {count} bursts of {chosen_emoji} at [{mode_name}] speed...")
 
                         try:
                             for i in range(count):
-                                # Open reaction tray
                                 react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
                                 if await react_btn.is_visible():
-                                    if delay > 0.01:
-                                        await react_btn.click()
-                                        await asyncio.sleep(delay)
-                                    else:
-                                        await react_btn.evaluate("node => node.click()")
+                                    await react_btn.click()
+                                    await asyncio.sleep(delay)
 
-                                    # Click specific emoji button via JS or locator
                                     tray_emoji_btn = page.locator(f"div[role='dialog'] button:has-text('{chosen_emoji}'), div.css-175oi2r button:has-text('{chosen_emoji}')").first
                                     if await tray_emoji_btn.count() > 0:
-                                        if delay > 0.01:
-                                            await tray_emoji_btn.click()
-                                        else:
-                                            await tray_emoji_btn.evaluate("node => node.click()")
+                                        await tray_emoji_btn.click()
                                         print(f"[{i+1}/{count}] Sent: {chosen_emoji}")
                                     else:
                                         fallback_btn = page.locator(f"button:has-text('{chosen_emoji}')").last
                                         if await fallback_btn.count() > 0:
-                                            await fallback_btn.evaluate("node => node.click()")
+                                            await fallback_btn.click()
                                             print(f"[{i+1}/{count}] Sent (fallback): {chosen_emoji}")
                                 
-                                if delay > 0.01:
-                                    await asyncio.sleep(delay)
+                                await asyncio.sleep(delay)
                         except Exception as e:
                             print(f"[-] Error sending reaction: {e}")
 
