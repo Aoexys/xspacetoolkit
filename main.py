@@ -86,25 +86,29 @@ async def run_space_emoji_bot():
                     print("="*45)
                     print("1. General Room Reactions (Standard Burst)")
                     print("2. Target Specific Speaker Avatar")
-                    mode_choice = input("Select mode (1 or 2, default: 2): ").strip() or "2"
+                    mode_choice = input("Select mode (1 or 2, default: 1): ").strip() or "1"
 
                     if mode_choice == "2":
-                        # Scan active speaker elements in the Space DOM
+                        # Scan active speaker elements in the Space DOM using robust participant cell selectors
                         print("\n[+] Scanning active speakers on stage...")
-                        speaker_nodes = page.locator("div[role='button']:has(img), div[data-testid='userAvatar']")
+                        speaker_nodes = page.locator("div[data-testid='UserCell'], div[role='region'] img[alt]")
                         speaker_count = await speaker_nodes.count()
 
                         if speaker_count == 0:
-                            print("[-] No active speaker avatars found. Retrying in general room mode...")
+                            print("[-] No active speaker avatars found. Falling back to general room mode...")
+                            mode_choice = "1"
                         else:
                             print(f"[+] Found {speaker_count} speaker nodes on stage.")
                             
-                            # Click the first detected speaker avatar to inspect popup DOM
                             target_index = 0
-                            print(f"[+] Clicking speaker avatar #{target_index + 1}...")
+                            print(f"[+] Targeting speaker avatar #{target_index + 1}...")
                             speaker_avatar = speaker_nodes.nth(target_index)
-                            await speaker_avatar.click()
-                            await asyncio.sleep(1)
+                            
+                            try:
+                                await speaker_avatar.click()
+                                await asyncio.sleep(0.8)
+                            except Exception:
+                                pass
 
                             # Print numbers menu for emojis
                             print("\n" + "="*45)
@@ -130,17 +134,14 @@ async def run_space_emoji_bot():
 
                                 try:
                                     for i in range(count):
-                                        # Click targeted speaker avatar
                                         await speaker_avatar.click()
                                         await asyncio.sleep(delay)
 
-                                        # Look for reaction button inside active popup
                                         target_emoji_btn = page.locator(f"button:has-text('{chosen_emoji}'), div[role='dialog'] button:has-text('{chosen_emoji}')").first
                                         if await target_emoji_btn.count() > 0:
                                             await target_emoji_btn.click()
                                             print(f"[{i+1}/{count}] Sent direct reaction {chosen_emoji} to speaker!")
                                         else:
-                                            # Fallback general tray
                                             fallback = page.locator(f"button:has-text('{chosen_emoji}')").last
                                             if await fallback.count() > 0:
                                                 await fallback.click()
@@ -152,7 +153,7 @@ async def run_space_emoji_bot():
 
                                 print("[+] Speaker reaction round complete!")
 
-                    else:
+                    if mode_choice == "1":
                         # Standard Room Reaction Loop
                         print("\n" + "="*45)
                         print("         SELECT REACTION EMOJI")
@@ -166,9 +167,13 @@ async def run_space_emoji_bot():
                         choice_input = input("Select emoji number (1-10): ").strip()
                         if choice_input in emoji_map:
                             chosen_emoji = emoji_map[choice_input]
-                            count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "25")
+                            try:
+                                count = int(input(f"How many times to send {chosen_emoji}?: ").strip() or "25")
+                            except ValueError:
+                                count = 25
                             delay = 0.016
 
+                            print(f"\n[+] Spaming {count} bursts of {chosen_emoji} at Ultra-Turbo speed...")
                             for i in range(count):
                                 react_btn = page.locator("button[aria-label='React'], button[aria-label='Reactions']").first
                                 if await react_btn.is_visible():
@@ -178,7 +183,13 @@ async def run_space_emoji_bot():
                                     if await tray_emoji_btn.count() > 0:
                                         await tray_emoji_btn.click()
                                         print(f"[{i+1}/{count}] Sent: {chosen_emoji}")
+                                    else:
+                                        fallback_btn = page.locator(f"button:has-text('{chosen_emoji}')").last
+                                        if await fallback_btn.count() > 0:
+                                            await fallback_btn.click()
+                                            print(f"[{i+1}/{count}] Sent (fallback): {chosen_emoji}")
                                 await asyncio.sleep(delay)
+                            print("[+] Round complete!")
 
                     await asyncio.sleep(4)
                 else:
